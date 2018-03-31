@@ -88,7 +88,10 @@ class NeuralNet(nn.Module):
     def Load(self, filepath):
         structureList = ExtractStructureFromFilename(filepath)
         self.__init__(structureList[2], structureList[0], structureList[3], structureList[4], structureList[5])
-        self.load_state_dict(torch.load(filepath))
+        if torch.cuda.is_available():
+            self.load_state_dict(torch.load(filepath))
+        else:
+            self.load_state_dict(torch.load(filepath, map_location=lambda storage, location: storage))
 
 
 
