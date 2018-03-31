@@ -26,12 +26,18 @@ def ExtractStructureFromFilename(filename):
 
 
 class NeuralNet(nn.Module):
-    def __init__(self, numberOfConvolutions_KernelSize_Pooling_List=[(32, 7, 2)], numberOfInputChannels=1,
-                 classesNbr=2, imageSize=32, dropoutRatio=0.5):
+    def __init__(self,
+                 numberOfConvolutions_KernelSize_Pooling_List=[(32, 7, 2)], numberOfInputChannels=1,
+                 classesNbr=2, imageSize=32, dropoutRatio=0.5,
+                 structure=None #'ConvStack_1_2_32_7_2_32_7_2_2_64_0.5'
+                ):
         """print("NeuralNet.__init__({}, {}, {}, {}, {})__".format(numberOfConvolutions_KernelSize_Pooling_List, numberOfInputChannels,
                  classesNbr, imageSize, dropoutRatio))
         """
         super(NeuralNet, self).__init__()
+        if structure is not None:
+            (numberOfInputChannels, numberOfConvolutionBlocks, numberOfConvolutions_KernelSize_Pooling_List,
+             classesNbr, imageSize, dropoutRatio) = ExtractStructureFromFilename(structure)
 
         if len(numberOfConvolutions_KernelSize_Pooling_List) < 1:
             raise RuntimeError("ConvStackClassifier.NeuralNet.__init__(): The number of convolution layers is 0")
