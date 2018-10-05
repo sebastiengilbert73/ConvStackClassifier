@@ -85,7 +85,8 @@ class NeuralNet(nn.Module):
         vector = activation.view(-1, self.lastLayerImageSize * self.lastLayerImageSize * self.lastLayerNumberOfChannels)
         drop = self.dropout(vector)
         outputLin = self.linear1(drop)
-        return F.log_softmax(outputLin)
+        #print ("forward(): outputLin.shape = {}".format(outputLin.shape))
+        return F.log_softmax(outputLin, dim=1)
 
     def Save(self, directory, filenameSuffix):
         filepath = os.path.join(directory, self.structure + '_' + filenameSuffix)
