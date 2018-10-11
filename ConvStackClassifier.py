@@ -76,6 +76,7 @@ class NeuralNet(nn.Module):
         self.dropout = nn.Dropout2d(p=dropoutRatio)
         self.numberOfConvolutionLayers = len(numberOfConvolutions_KernelSize_Pooling_List)
         self.structure += '_{}_{}_{}'.format(classesNbr, imageSize, dropoutRatio)
+        self.inputImageSize = (imageSize, imageSize)
 
     def forward(self, inputs):
         activation = self.convLayers[0](inputs)
@@ -100,5 +101,6 @@ class NeuralNet(nn.Module):
         else:
             self.load_state_dict(torch.load(filepath, map_location=lambda storage, location: storage))
 
-
+    def InputImageSize(self):
+        return self.inputImageSize
 
