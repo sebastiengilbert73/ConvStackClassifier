@@ -78,6 +78,7 @@ class NeuralNet(nn.Module):
         self.structure += '_{}_{}_{}'.format(classesNbr, imageSize, dropoutRatio)
         self.inputImageSize = (imageSize, imageSize)
 
+
     def forward(self, inputs):
         activation = self.convLayers[0](inputs)
         for layerNdx in range(1, self.numberOfConvolutionLayers):
