@@ -8,21 +8,60 @@ import os
 import PIL.Image
 
 
+def ResidualBlock(numberOfChannels, kernelSize):
+    return torch.nn.Sequential(
+        torch.nn.Conv2d(in_channels=numberOfChannels, out_channels=numberOfChannels, kernel_size=kernelSize, padding=int(kernelSize/2)),
+        #torch.nn.BatchNorm2d(num_features=numberOfChannels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Conv2d(in_channels=numberOfChannels, out_channels=numberOfChannels, kernel_size=kernelSize, padding=int(kernelSize/2)),
+        #torch.nn.BatchNorm2d(num_features=numberOfChannels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        torch.nn.Dropout(p=0.5)
+    )
+
+
 class NeuralNet(torch.nn.Module):
     def __init__(self):
         super(NeuralNet, self).__init__()
-        self.residual1 = torch.nn.Sequential(
+        self.initialConv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1)
+            torch.nn.BatchNorm2d(num_features=32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         )
-        self.coef1_1 = torch.Tensor([1.0])
+        """self.residual1 = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1),
+            torch.nn.BatchNorm2d(num_features=32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1),
+            torch.nn.BatchNorm2d(num_features=32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+        """
+        self.residual1 = ResidualBlock(32, 5)
+        self.coef1_1 = torch.nn.Parameter(torch.zeros([1]))
+        self.coef1_2 = torch.nn.Parameter(torch.zeros([1]))
+        self.residual2 = ResidualBlock(32, 5)
+        self.coef2_1 = torch.nn.Parameter(torch.zeros([1]))
+        self.coef2_2 = torch.nn.Parameter(torch.zeros([1]))
+        self.residual3 = ResidualBlock(32, 5)
+        self.coef3_1 = torch.nn.Parameter(torch.zeros([1]))
+        self.coef3_2 = torch.nn.Parameter(torch.zeros([1]))
+
+        #self.dropout = torch.nn.Dropout2d(p=0.5)
         self.linear1 = torch.nn.Linear(57 * 57 * 32, 2)
 
     def forward(self, inputs):
-        residual1 = self.residual1(inputs)
-        output1 = self.coef1_1 * inputs + residual1
-        vector = output1.view(-1, 57 * 57 * 32)
+        initialConv = self.initialConv(inputs)
+        residual1 = self.residual1(initialConv)
+        output1 = self.coef1_1 * initialConv + self.coef1_2 * torch.pow(initialConv, 2) + residual1
+
+        residual2 = self.residual2(output1)
+        output2 = self.coef2_1 * output1 + self.coef2_2 * torch.pow(output1, 2) + residual2
+
+        residual3 = self.residual3(output2)
+        output3 = self.coef3_1 * output2 + self.coef3_2 * torch.pow(output2, 2) + residual3
+
+
+        #droppedOutput2 = self.dropout(output2)
+        vector = output3.view(-1, 57 * 57 * 32)
+
         outputLin = self.linear1(vector)
         return torch.nn.functional.log_softmax(outputLin, dim=1)
 
