@@ -6,6 +6,7 @@ import math
 from collections import OrderedDict
 import os
 import PIL.Image
+import ast
 
 
 def ResidualBlock(numberOfChannels, kernelSize, dropoutRatio):
@@ -29,9 +30,19 @@ class NeuralNet(torch.nn.Module):
                  residualBlocksDropoutRatio=0.5,
                  polynomialsDegree=2,
                  imageSize=(57, 57), # (W, H)
-                 numberOfClasses=2
+                 numberOfClasses=2,
+                 structure=None
                  ):
         super(NeuralNet, self).__init__()
+
+        if structure is not None:
+            inputNumberOfChannels, imageSize, numberOfClasses, initialConvolutionKernelSize, \
+                hiddenBlocksNumberOfChannels, numberOfResidualBlocks, residualBlocksKernelSize, \
+                residualBlocksDropoutRatio, polynomialsDegree = self.ExtractStructureFromFilename(structure)
+
+        self.imageSize = imageSize
+        print ("NeuralNet(): self.imageSize = {}".format(self.imageSize))
+
         self.initialConv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=inputNumberOfChannels, out_channels=hiddenBlocksNumberOfChannels,
                             kernel_size=initialConvolutionKernelSize, padding=int(initialConvolutionKernelSize/2)),
@@ -69,9 +80,9 @@ class NeuralNet(torch.nn.Module):
         """
 
         #self.dropout = torch.nn.Dropout2d(p=0.5)
-        self.linear1 = torch.nn.Linear(imageSize[0] * imageSize[1] * hiddenBlocksNumberOfChannels, numberOfClasses)
+        self.linear1 = torch.nn.Linear(self.imageSize[0] * self.imageSize[1] * hiddenBlocksNumberOfChannels, numberOfClasses)
 
-        self.imageSize = imageSize
+
         self.numberOfClasses = numberOfClasses
         self.hiddenBlocksNumberOfChannels = hiddenBlocksNumberOfChannels
         self.polynomialsDegree = polynomialsDegree
@@ -111,17 +122,46 @@ class NeuralNet(torch.nn.Module):
         torch.save(self.state_dict(), filepath)
 
     def Load(self, filepath, useCuda=True):
-        self.__init__()
+        inputNumberOfChannels, imageSize, numberOfClasses, initialConvolutionKernelSize, \
+            hiddenBlocksNumberOfChannels, numberOfResidualBlocks, residualBlocksKernelSize, \
+            residualBlocksDropoutRatio, polynomialsDegree = self.ExtractStructureFromFilename(structure)
+        self.__init__(inputNumberOfChannels,
+                 hiddenBlocksNumberOfChannels,
+                 initialConvolutionKernelSize,
+                 numberOfResidualBlocks,
+                 residualBlocksKernelSize,
+                 residualBlocksDropoutRatio,
+                 polynomialsDegree,
+                 imageSize, # (W, H)
+                 numberOfClasses)
         if useCuda and torch.cuda.is_available():
             self.load_state_dict(torch.load(filepath))
         else:
             self.load_state_dict(torch.load(filepath, map_location=lambda storage, location: storage))
 
+    def ExtractStructureFromFilename(self, filename):
+        tokens = os.path.basename(filename).split('_')  # Remove the directory path
+        if not tokens[0] == 'PolyResNet':
+            raise RuntimeError(
+                "PolyResNet.ExtractStructureFromFilename(): The filename '{}' doesn't start with 'PolyResNet_'".format(
+                    filename))
+        inputNumberOfChannels = int(tokens[1])
+        imageSize = ast.literal_eval(tokens[2])
+        numberOfClasses = int(tokens[3])
+        initialConvolutionKernelSize = int(tokens[4])
+        hiddenBlocksNumberOfChannels = int(tokens[5])
+        numberOfResidualBlocks = int(tokens[6])
+        residualBlocksKernelSize = int(tokens[7])
+        residualBlocksDropoutRatio = float(tokens[8])
+        polynomialsDegree = int(tokens[9])
+        return inputNumberOfChannels, imageSize, numberOfClasses, initialConvolutionKernelSize, \
+            hiddenBlocksNumberOfChannels, numberOfResidualBlocks, residualBlocksKernelSize, \
+            residualBlocksDropoutRatio, polynomialsDegree
 
 def main():
     print ("PolyResNet.py main()")
-    neuralNet = NeuralNet()
-    inputImg = PIL.Image.open('/home/segilber/Documents/OPOS/Datasets/LFP_dataset_2018-11-21/test/42179_X1.84_Y4.47.png').convert('L')
+    neuralNet = NeuralNet(imageSize=(640, 480))
+    """inputImg = PIL.Image.open('/home/sebastien/Pictures/Webcam/2018-09-30-173135.jpg').convert('L')
     #inputImg = PIL.Image.open('/home/segilber/Pictures/chestnut-horse-autumn_1000.jpg')
     #print ("main() inputImg.size = {}".format(inputImg.size)) # (W, H)
     imageToTensorConverter = torchvision.transforms.ToTensor()
@@ -134,6 +174,19 @@ def main():
     output = neuralNet(minibatchTensor)
     print ("main(): output = {}".format(output))
     print("main(): output.shape = {}".format(output.shape))
+    """
+    structure = 'PolyResNet_1_(57,57)_2_3_32_3_5_0.5_2'
+    inputNumberOfChannels, \
+        imageSize, \
+        numberOfClasses, \
+        initialConvolutionKernelSize, \
+        hiddenBlocksNumberOfChannels, \
+        numberOfResidualBlocks, \
+        residualBlocksKernelSize, \
+        residualBlocksDropoutRatio, \
+        polynomialsDegree = neuralNet.ExtractStructureFromFilename(structure)
+
+    neurNeuralNet
 
 if __name__ == '__main__':
     main()
