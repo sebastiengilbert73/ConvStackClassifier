@@ -92,9 +92,9 @@ class NeuralNet(torch.nn.Module):
 
         for residualBlockNdx in range(self.numberOfResidualBlocks):
             layerName = 'residualBlock' + str(residualBlockNdx)
-            initialState = hiddenState
-            residual = self.residualLayers[residualBlockNdx](initialState)
-            hiddenState = residual
+            initialState = hiddenState.clone()
+            hiddenState = self.residualLayers[residualBlockNdx](initialState)
+            #hiddenState = residual
             for exponent in range(1, self.polynomialsDegree + 1):
                 coefficientName = 'coef_' + str(residualBlockNdx) + '_' + str(exponent)
                 #print ("PolyResNet.py forward(): self.layersPolynomialCoefficientsDict[layerName][polynomialNdx] : {}".format(self.layersPolynomialCoefficientsDict[layerName][polynomialNdx] ))
