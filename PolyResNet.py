@@ -40,8 +40,10 @@ class NeuralNet(torch.nn.Module):
                 hiddenBlocksNumberOfChannels, numberOfResidualBlocks, residualBlocksKernelSize, \
                 residualBlocksDropoutRatio, polynomialsDegree = self.ExtractStructureFromFilename(structure)
 
+        self.inputNumberOfChannels = inputNumberOfChannels
         self.imageSize = imageSize
-        print ("NeuralNet(): self.imageSize = {}".format(self.imageSize))
+        self.initialConvolutionKernelSize = initialConvolutionKernelSize
+        #print ("NeuralNet(): self.imageSize = {}".format(self.imageSize))
 
         self.initialConv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=inputNumberOfChannels, out_channels=hiddenBlocksNumberOfChannels,
@@ -79,13 +81,17 @@ class NeuralNet(torch.nn.Module):
         self.coef3_2 = torch.nn.Parameter(torch.zeros([1]))
         """
 
-        #self.dropout = torch.nn.Dropout2d(p=0.5)
-        self.linear1 = torch.nn.Linear(self.imageSize[0] * self.imageSize[1] * hiddenBlocksNumberOfChannels, numberOfClasses)
+        self.dropout = torch.nn.Dropout2d(p=0.5)
+        self.numberOfFeatures = self.imageSize[0] * self.imageSize[1] * hiddenBlocksNumberOfChannels
+        self.linear1 = torch.nn.Linear(self.numberOfFeatures, int( math.sqrt(self.numberOfFeatures * numberOfClasses) ) )
+        self.linear2 = torch.nn.Linear(int(math.sqrt(self.numberOfFeatures * numberOfClasses) ), numberOfClasses)
 
 
         self.numberOfClasses = numberOfClasses
         self.hiddenBlocksNumberOfChannels = hiddenBlocksNumberOfChannels
         self.polynomialsDegree = polynomialsDegree
+        self.residualBlocksKernelSize = residualBlocksKernelSize
+        self.residualBlocksDropoutRatio = residualBlocksDropoutRatio
 
     def forward(self, inputs):
         hiddenState = self.initialConv(inputs)
@@ -114,17 +120,19 @@ class NeuralNet(torch.nn.Module):
         #vector = output3.view(-1, 57 * 57 * 32)
         vector = hiddenState.view(-1, self.imageSize[0] * self.imageSize[1] * self.hiddenBlocksNumberOfChannels)
 
+        vector = self.dropout(vector)
         outputLin = self.linear1(vector)
+        outputLin = self.linear2(torch.nn.functional.relu(outputLin))
         return torch.nn.functional.log_softmax(outputLin, dim=1)
 
     def Save(self, directory, filenameSuffix):
-        filepath = os.path.join(directory, 'PolyResNet' + '_' + filenameSuffix)
+        filepath = os.path.join(directory, self.Structure() + '_' + filenameSuffix)
         torch.save(self.state_dict(), filepath)
 
     def Load(self, filepath, useCuda=True):
         inputNumberOfChannels, imageSize, numberOfClasses, initialConvolutionKernelSize, \
             hiddenBlocksNumberOfChannels, numberOfResidualBlocks, residualBlocksKernelSize, \
-            residualBlocksDropoutRatio, polynomialsDegree = self.ExtractStructureFromFilename(structure)
+            residualBlocksDropoutRatio, polynomialsDegree = self.ExtractStructureFromFilename(filepath)
         self.__init__(inputNumberOfChannels,
                  hiddenBlocksNumberOfChannels,
                  initialConvolutionKernelSize,
@@ -157,6 +165,13 @@ class NeuralNet(torch.nn.Module):
         return inputNumberOfChannels, imageSize, numberOfClasses, initialConvolutionKernelSize, \
             hiddenBlocksNumberOfChannels, numberOfResidualBlocks, residualBlocksKernelSize, \
             residualBlocksDropoutRatio, polynomialsDegree
+
+    def Structure(self):
+        structureStr = 'PolyResNet_' + str(self.inputNumberOfChannels) + '_' + str(self.imageSize) + '_' + str(self.numberOfClasses) + '_' + \
+            str(self.initialConvolutionKernelSize) + '_' + str(self.hiddenBlocksNumberOfChannels) + '_' + str(self.numberOfResidualBlocks) + '_' + \
+            str(self.residualBlocksKernelSize) + '_' + str(self.residualBlocksDropoutRatio) + '_' + str(self.polynomialsDegree)
+        structureStr = structureStr.replace(' ', '')
+        return structureStr
 
 def main():
     print ("PolyResNet.py main()")
