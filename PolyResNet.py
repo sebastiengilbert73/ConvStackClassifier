@@ -173,6 +173,9 @@ class NeuralNet(torch.nn.Module):
         structureStr = structureStr.replace(' ', '')
         return structureStr
 
+    def InputImageSize(self):
+        return self.imageSize
+
 def main():
     print ("PolyResNet.py main()")
     neuralNet = NeuralNet(imageSize=(640, 480))
