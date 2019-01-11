@@ -24,6 +24,12 @@ def ExtractStructureFromFilename(filename):
     dropoutRatio = float(tokens[3 + 3 * numberOfConvolutionBlocks + 2])
     return (numberOfInputChannels, numberOfConvolutionBlocks, convolutionTrios, numberOfClasses, imageSize, dropoutRatio)
 
+def init_weights(m):
+    if type(m) == nn.Linear:
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.0)
+    elif type(m) == nn.Conv2d:
+        torch.nn.init.xavier_uniform_(m.weight)
 
 class NeuralNet(nn.Module):
     def __init__(self,
@@ -78,6 +84,7 @@ class NeuralNet(nn.Module):
         self.structure += '_{}_{}_{}'.format(classesNbr, imageSize, dropoutRatio)
         self.inputImageSize = (imageSize, imageSize)
 
+        self.apply(init_weights)
 
     def forward(self, inputs):
         activation = self.convLayers[0](inputs)
